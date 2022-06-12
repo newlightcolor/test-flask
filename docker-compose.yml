@@ -1,10 +1,62 @@
-version: "3"
+version: "3.7"
 services:
-  app:
-    build: ./app
+  db:
+    container_name: db
+    image: mysql:5.7
+    restart: always
+    tty: true
+    environment:
+      MYSQL_DATABASE: test_database
+      MYSQL_USER: docker
+      MYSQL_PASSWORD: docker
+      MYSQL_ROOT_PASSWORD: root
+    command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - ./db/data:/var/lib/mysql
+      - ./db/my.cnf:/etc/mysql/conf.d/my.cnf
+      - ./db/sql:/docker-entrypoint-initdb.d
     ports:
-     - "5000:5000"
+      - 3306:3306
+    networks:
+      - local-net
+
+  app:
+    links:
+      - db
+    build:
+      context: ./app
+      args:
+        project_directory: "/app/"
+    ports:
+      - "5000:5000"
+      - "5001:5001"
     container_name: app
     volumes:
-     - ./app:/usr/src/app
-    command: flask run --host=0.0.0.0
+      - ./app:/app
+    env_file:
+      - ./line_channel.env
+    environment:
+      TZ: "Asia/Tokyo"
+      FLASK_ENV: "development"
+    depends_on:
+      - db
+    networks:
+      - local-net
+    command: "flask run --host=0.0.0.0"
+
+  phpmyadmin:
+    container_name: phpmyadmin
+    image: phpmyadmin/phpmyadmin
+    environment:
+      - PMA_ARBITRARY=1
+      - PMA_HOSTS=db
+      - PMA_USER=root
+      - PMA_PASSWORD=root
+    ports:
+      - 8080:80
+    networks:
+      - local-net
+
+networks:
+  local-net:
+    driver: bridge

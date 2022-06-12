@@ -2,14 +2,11 @@
 // https://github.com/microsoft/vscode-dev-containers/tree/v0.238.0/containers/docker-existing-docker-compose
 // If you want to run as a non-root user in the container, see .devcontainer/docker-compose.yml.
 {
-	"name": "Existing Docker Compose (Extend)",
-	"dockerComposeFile": [
-		"../docker-compose.yml"
-	],
+	"name": "Flask Remote Sample",
+	"dockerComposeFile": "../docker-compose.yml",
 	"service": "app",
-	"workspaceFolder": "/usr/src/app",
-    "extensions": [
-        "ms-python.python",
-        "ms-python.vscode-pylance"
-    ]
+	"workspaceFolder": "/app",
+	"extensions": [
+		"ms-python.python"
+	]
 }

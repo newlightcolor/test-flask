@@ -1,9 +1,7 @@
-FROM python:3.7
+FROM python:3.7.4
 
-WORKDIR /usr/src/app
-ENV FLASK_APP=app
+ARG project_directory
+WORKDIR $project_directory
 
-COPY /requirements.txt ./
-
-RUN pip install --upgrade pip
+COPY ./requirements.txt /app
 RUN pip install -r requirements.txt
