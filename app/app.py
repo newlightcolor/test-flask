@@ -38,6 +38,8 @@ def callback():
 def handle_message(event):
     if event.message.text == '明日の天気は？':
         weather_report(event)
+    elif event.message.text == '名前は？':
+        say_name(event)
     else:
         repeat_message(event)
 
@@ -46,14 +48,20 @@ def weather_report(event):
     weather_index = random.randint(0, len(list_weather)-1)
     line_bot_api.reply_message(
         event.reply_token,
-        TextSendMessage(text="ゆうた: たぶん" + list_weather[weather_index] + "!"))
+        TextSendMessage(text="たぶん" + list_weather[weather_index] + "!"))
+
+def say_name(event):
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(text="おら、ゆうた!"))
 
 def repeat_message(event):
     line_bot_api.reply_message(
         event.reply_token,
-        TextSendMessage(text="ゆうた: " + event.message.text))
+        TextSendMessage(text=event.message.text))
 
 
 
-if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+if os.getenv('APP_ENV') == "production":
+    if __name__ == '__main__':
+        app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))

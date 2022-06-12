@@ -35,6 +35,7 @@ services:
       - ./app:/app
     env_file:
       - ./line_channel.env
+      - ./app_env.env
     environment:
       TZ: "Asia/Tokyo"
       FLASK_ENV: "development"
