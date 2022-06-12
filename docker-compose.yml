@@ -29,7 +29,6 @@ services:
         project_directory: "/app/"
     ports:
       - "5000:5000"
-      - "5001:5001"
     container_name: app
     volumes:
       - ./app:/app
