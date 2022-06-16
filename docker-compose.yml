@@ -6,7 +6,7 @@ services:
     restart: always
     tty: true
     environment:
-      MYSQL_DATABASE: test_database
+      MYSQL_DATABASE: test_flask
       MYSQL_USER: docker
       MYSQL_PASSWORD: docker
       MYSQL_ROOT_PASSWORD: root

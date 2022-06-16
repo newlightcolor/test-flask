@@ -1,3 +1,9 @@
+# 環境変数
 line_channel.env
+app_env.env
+
+# python関連
 __pycache__
+
+# DB関連
 /db/data
