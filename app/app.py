@@ -1,9 +1,9 @@
 import os
 import pprint
-from pipes import Template
 import random
+from pipes import Template
 
-from flask import Flask, request, abort
+from flask import Flask, request, abort, render_template
 from db import init_db, db
 from models import User, LineUser, LineNoticeSchedule
 
@@ -30,9 +30,30 @@ def create_app():
     def index():
         return "test-"
 
-    @app.route("/push_message/<message>")
-    def push_message(message):
-        return "pushed message"
+    @app.route("/set_schedule_message/<line_user_id>/<schedule_id>/")
+    def set_schedule_message(line_user_id=None, schedule_id=None):
+        return render_template('set_schedule_message.html', line_user_id=line_user_id, schedule_id=schedule_id)
+
+    @app.route("/set_schedule_message_finish/", methods=['POST'])
+    def set_schedule_message_finish():
+        message = request.form['schedule_message']
+        id = request.form['schedule_id']
+        line_user_id = request.form['line_user_id']
+
+        schedule = LineNoticeSchedule.query.filter(
+            LineNoticeSchedule.id == id,
+            LineNoticeSchedule.line_user_id == line_user_id).first()
+
+        if schedule is None:
+            error_message='この予定は存在しないみたい...'
+            return render_template('error.html', error_message=error_message)
+        elif message == '':
+            error_message='メッセージが入力されてないよ！'
+            return render_template('error.html', error_message=error_message)
+        else :
+            success_message='「' + message + '」で通知するね！'
+            success_title='OK！'
+            return render_template('success.html', success_message=success_message, success_title=success_title)
 
     @app.route("/callback", methods=['POST'])
     def callback():
@@ -57,6 +78,8 @@ def create_app():
             say_name(event)
         elif event.message.text == '記録':
             save_user(event)
+        elif event.message.text == '位置情報を記録':
+            quick_reply(event)
         elif event.message.text == '予定':
             ask_schedule(event)
         else:
@@ -81,6 +104,11 @@ def create_app():
                     'type': 'message',
                     'label': '記録',
                     'text': '記録'
+                },
+                {
+                    'type': 'message',
+                    'label': '位置情報を保存',
+                    'text': '位置情報を保存'
                 },
                 {
                     'type': 'message',
@@ -120,8 +148,28 @@ def create_app():
             event.reply_token,
             TextSendMessage(text="記録したよ～"))
 
+    # 位置情報クイックリプライを送信
+    def save_user(event):
+        line_user_id = event.source.user_id
+        profile = line_bot_api.get_profile(line_user_id)
+
+        line_user = LineUser(name=profile.display_name, line_user_id=line_user_id, pic_url=profile.picture_url)
+        db.session.add(line_user)
+        db.session.commit()
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="記録したよ～"))
+
     # スケジュールを尋ねる
     def ask_schedule(event):
+        line_user_id = event.source.user_id
+        line_notice_schedule = LineNoticeSchedule(line_user_id=line_user_id)
+        db.session.add(line_notice_schedule)
+        db.session.commit()
+
+        set_schedule_message_uri = 'https://flask-linebot300995.herokuapp.com/set_schedule_message/'+\
+                                    line_user_id+'/'+str(line_notice_schedule.id)+'/'
+
         buttonsTemplate = ButtonsTemplate(
             text='いつ通知すればいい？',
             actions=[
@@ -134,7 +182,7 @@ def create_app():
                 {
                     'type': 'uri',
                     'label': '通知内容を入力',
-                    'uri': 'https://www.youtube.com/watch?v=5qap5aO4i9A&ab_channel=LofiGirl'
+                    'uri': set_schedule_message_uri
                 },
                 {
                     'type': 'postback',
@@ -147,11 +195,6 @@ def create_app():
             TemplateSendMessage(
                 alt_text='いつ通知すればいい？',
                 template=buttonsTemplate))
-
-    def repeat_message(event):
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=event.message.text))
 
     @handler.add(PostbackEvent)
     def on_postback(event):

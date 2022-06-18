@@ -1,0 +1,18 @@
+{% extends "common/base.html" %}
+{% block head %}{% endblock %}
+
+{% block content %}
+    {% if error_title %}
+        <h1>{{ error_title }}</h1>
+    {% else %}
+        <h1>エラーになっちゃった！</h1>
+    {% endif %}
+
+    {% if error_message %}
+        <div class="alert alert-warning" role="alert">
+            {{ error_message }}
+        </div>
+    {% endif %}
+    <input type="button" onclick="history.back();" value="戻る" class="btn btn-primary">
+    <input type="button" onclick="window.close();" value="ページを閉じる" class="btn btn-primary">
+{% endblock %}

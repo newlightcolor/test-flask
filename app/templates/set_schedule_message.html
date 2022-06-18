@@ -1,0 +1,19 @@
+{% extends "common/base.html" %}
+{% block head %}{% endblock %}
+{% block title %}通知内容を入力{% endblock %}Text
+
+{% block content %}
+<form action="/set_schedule_message_finish/" method="POST">
+    <input type="hidden" name="schedule_id" value="{{ schedule_id }}">
+    <input type="hidden" name="line_user_id" value="{{ line_user_id }}">
+
+    <div class="mb-3">
+        <label for="schedule_message" class="form-label">
+            <span class="material-symbols-rounded google_icon">sms</span>
+            通知メッセージ
+        </label>
+        <input type="text" name="schedule_message" id="schedule_message" class="form-control" placeholder="通知するときに送信してほしいメッセージを入力してね">
+    </div>
+    <button type="submit" class="btn btn-primary">OK</button>
+</form>
+{% endblock %}
