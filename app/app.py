@@ -14,7 +14,8 @@ from linebot.exceptions import (
     InvalidSignatureError
 )
 from linebot.models import (
-    MessageEvent, TextMessage, TextSendMessage, TemplateSendMessage, ButtonsTemplate, PostbackEvent
+    MessageEvent, TextMessage, TextSendMessage, TemplateSendMessage, ButtonsTemplate,
+    PostbackEvent, QuickReply
 )
 
 def create_app():
@@ -78,8 +79,8 @@ def create_app():
             say_name(event)
         elif event.message.text == '記録':
             save_user(event)
-        elif event.message.text == '位置情報を記録':
-            quick_reply(event)
+        elif event.message.text == '位置情報を保存':
+            send_location_quick_reply(event)
         elif event.message.text == '予定':
             ask_schedule(event)
         else:
@@ -99,11 +100,6 @@ def create_app():
                     'type': 'message',
                     'label': '名前は？',
                     'text': '名前は？'
-                },
-                {
-                    'type': 'message',
-                    'label': '記録',
-                    'text': '記録'
                 },
                 {
                     'type': 'message',
@@ -149,16 +145,25 @@ def create_app():
             TextSendMessage(text="記録したよ～"))
 
     # 位置情報クイックリプライを送信
-    def save_user(event):
+    def send_location_quick_reply(event):
         line_user_id = event.source.user_id
         profile = line_bot_api.get_profile(line_user_id)
-
         line_user = LineUser(name=profile.display_name, line_user_id=line_user_id, pic_url=profile.picture_url)
         db.session.add(line_user)
         db.session.commit()
+        quick_reply = QuickReply(
+            items=[{
+                'type': 'action',
+                'action': {
+                    'type': 'location',
+                    'label': '位置情報を入力',
+                }}])
+
         line_bot_api.reply_message(
             event.reply_token,
-            TextSendMessage(text="記録したよ～"))
+            TextSendMessage(
+                text="位置情報を入力してね！",
+                quick_reply=quick_reply))
 
     # スケジュールを尋ねる
     def ask_schedule(event):

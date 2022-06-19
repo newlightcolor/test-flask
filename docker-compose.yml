@@ -42,7 +42,7 @@ services:
       - db
     networks:
       - local-net
-    command: "flask run --host=0.0.0.0"
+    command: "sleep infinity"
 
   phpmyadmin:
     container_name: phpmyadmin
