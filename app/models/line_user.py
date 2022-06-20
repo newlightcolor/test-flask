@@ -35,8 +35,9 @@ class LineUser(db.Model):
             return line_users.all()
 
     # INSERT
-    def insert(line_user_id:str, name:str = None, pic_url:str = None):
-        line_user = LineUser(line_user_id=line_user_id, name=name, pic_url=pic_url)
+    def insert(line_user_id:str, name:str = None, pic_url:str = None, latitude:float = None, longitude:float = None):
+        line_user = \
+            LineUser(line_user_id=line_user_id, name=name, pic_url=pic_url, latitude=latitude, longitude=longitude)
         db.session.add(line_user)
         db.session.commit()
         return line_user.id #insert_id

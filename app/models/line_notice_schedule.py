@@ -20,8 +20,8 @@ class LineNoticeSchedule(db.Model):
             line_notice_schedule = line_notice_schedule.filter(LineNoticeSchedule.id == where['id'])
         if 'line_user_id' in where:
             line_notice_schedule = line_notice_schedule.filter(LineNoticeSchedule.line_user_id == where['line_user_id'])
-        if 'schedule' in where:
-            line_notice_schedule = line_notice_schedule.filter(LineNoticeSchedule.schedule == where['schedule'])
+        if 'schedule_lte' in where:
+            line_notice_schedule = line_notice_schedule.filter(LineNoticeSchedule.schedule <= where['schedule_lte'])
         if 'finished' in where:
             line_notice_schedule = line_notice_schedule.filter(LineNoticeSchedule.finished == where['finished'])
 

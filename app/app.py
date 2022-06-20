@@ -1,10 +1,11 @@
 import os
 import pprint
 import random
+from datetime import datetime
 from pipes import Template
 
 from flask import Flask, request, abort, render_template
-from db import init_db, db
+from db import init_db
 from models import User, LineUser, LineNoticeSchedule
 
 from linebot import (
@@ -15,7 +16,7 @@ from linebot.exceptions import (
 )
 from linebot.models import (
     MessageEvent, TextMessage, TextSendMessage, TemplateSendMessage, ButtonsTemplate,
-    PostbackEvent, QuickReply
+    PostbackEvent, QuickReply, LocationMessage
 )
 
 def create_app():
@@ -27,24 +28,26 @@ def create_app():
     line_bot_api = LineBotApi(os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
     handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
 
+    """
+    WebAPP route
+    """
     @app.route("/")
     def index():
         return "test-"
 
     @app.route("/set_schedule_message/<line_user_id>/<schedule_id>/")
     def set_schedule_message(line_user_id=None, schedule_id=None):
-        return render_template('set_schedule_message.html', line_user_id=line_user_id, schedule_id=schedule_id)
+        return render_template('set_schedule_message.html',
+                                line_user_id=line_user_id,
+                                schedule_id=schedule_id)
 
     @app.route("/set_schedule_message_finish/", methods=['POST'])
     def set_schedule_message_finish():
-        message = request.form['schedule_message']
         id = request.form['schedule_id']
         line_user_id = request.form['line_user_id']
+        schedule = LineNoticeSchedule.get_list(where={'id':id, 'line_user_id':line_user_id}, limit=1)
 
-        schedule = LineNoticeSchedule.query.filter(
-            LineNoticeSchedule.id == id,
-            LineNoticeSchedule.line_user_id == line_user_id).first()
-
+        message = request.form['schedule_message']
         if schedule is None:
             error_message='この予定は存在しないみたい...'
             return render_template('error.html', error_message=error_message)
@@ -52,10 +55,37 @@ def create_app():
             error_message='メッセージが入力されてないよ！'
             return render_template('error.html', error_message=error_message)
         else :
+            LineNoticeSchedule.update(where={'id':id}, set={'message':message})
             success_message='「' + message + '」で通知するね！'
-            success_title='OK！'
+            success_title='OK!'
             return render_template('success.html', success_message=success_message, success_title=success_title)
 
+
+
+    """
+    API route
+    """
+
+
+
+    """
+    CRON route
+    """
+    @app.route("/notice_schedule/")
+    def notice_schedule():
+        schedules_send_notify = LineNoticeSchedule.get_list(where={'schedule_lte': datetime.now()})
+        for schedule in schedules_send_notify:
+            line_bot_api.push_message(
+                schedule.line_user_id,
+                TextSendMessage(text="通知だよ！:\n" + schedule.message)
+            )
+        return 'とぅる～'
+
+
+    """
+    line callback
+    """
+    # LineAPIサーバーに返すだけ
     @app.route("/callback", methods=['POST'])
     def callback():
         signature = request.headers['X-Line-Signature']
@@ -71,6 +101,11 @@ def create_app():
 
         return 'OK'
 
+
+
+    """
+    text message action handle
+    """
     @handler.add(MessageEvent, message=TextMessage)
     def handle_message(event):
         if event.message.text == '明日の天気は？':
@@ -137,9 +172,7 @@ def create_app():
         line_user_id = event.source.user_id
         profile = line_bot_api.get_profile(line_user_id)
 
-        line_user = LineUser(name=profile.display_name, line_user_id=line_user_id, pic_url=profile.picture_url)
-        db.session.add(line_user)
-        db.session.commit()
+        insert_id = LineUser.insert(name=profile.display_name, line_user_id=line_user_id, pic_url=profile.picture_url)
         line_bot_api.reply_message(
             event.reply_token,
             TextSendMessage(text="記録したよ～"))
@@ -148,32 +181,30 @@ def create_app():
     def send_location_quick_reply(event):
         line_user_id = event.source.user_id
         profile = line_bot_api.get_profile(line_user_id)
-        line_user = LineUser(name=profile.display_name, line_user_id=line_user_id, pic_url=profile.picture_url)
-        db.session.add(line_user)
-        db.session.commit()
-        quick_reply = QuickReply(
-            items=[{
-                'type': 'action',
-                'action': {
-                    'type': 'location',
-                    'label': '位置情報を入力',
-                }}])
+        insert_id = LineUser.insert(name=profile.display_name, line_user_id=line_user_id, pic_url=profile.picture_url)
 
         line_bot_api.reply_message(
             event.reply_token,
             TextSendMessage(
                 text="位置情報を入力してね！",
-                quick_reply=quick_reply))
+                quick_reply=QuickReply(items=[
+                                                {
+                                                    'type': 'action',
+                                                    'action':
+                                                    {
+                                                        'type': 'location',
+                                                        'label': '位置情報を入力'
+                                                    }
+                                                }
+                                            ])
+            ))
 
     # スケジュールを尋ねる
     def ask_schedule(event):
         line_user_id = event.source.user_id
-        line_notice_schedule = LineNoticeSchedule(line_user_id=line_user_id)
-        db.session.add(line_notice_schedule)
-        db.session.commit()
-
+        line_notice_schedule_id = str(LineNoticeSchedule.insert(line_user_id=line_user_id))
         set_schedule_message_uri = 'https://flask-linebot300995.herokuapp.com/set_schedule_message/'+\
-                                    line_user_id+'/'+str(line_notice_schedule.id)+'/'
+                                    line_user_id+'/'+line_notice_schedule_id+'/'
 
         buttonsTemplate = ButtonsTemplate(
             text='いつ通知すればいい？',
@@ -181,7 +212,7 @@ def create_app():
                 {
                     'type': 'datetimepicker',
                     'label': '日付を入力',
-                    'data': 'action=datetemp&selectId=1',
+                    'data': 'action=line_notice_schedule&how=set_datetime&line_notice_schedule_id='+line_notice_schedule_id,
                     'mode': 'datetime',
                 },
                 {
@@ -192,7 +223,7 @@ def create_app():
                 {
                     'type': 'postback',
                     'label': 'やっぱいいや',
-                    'data': 'action=cancel&selectId=2'
+                    'data': 'action=line_notice_schedule&how=cancel&line_notice_schedule_id='+line_notice_schedule_id
                 }])
 
         line_bot_api.reply_message(
@@ -201,31 +232,75 @@ def create_app():
                 alt_text='いつ通知すればいい？',
                 template=buttonsTemplate))
 
+
+
+    """
+    location message action handle
+    """
+    @handler.add(MessageEvent, message=LocationMessage)
+    def handle_message(event):
+        save_location(event)
+
+    # 位置情報をユーザー情報に記録
+    def save_location(event):
+        line_users = LineUser.get_list(where={'line_user_id':event.source.user_id})
+        if line_users:
+            line_user = line_users[0]
+            LineUser.update(
+                where={'id':line_user.id},
+                set={'latitude': event.message.latitude, 'longitude': event.message.longitude})
+            line_bot_api.push_message(
+                event.source.user_id,
+                TextSendMessage(
+                    text='Latitude:'+str(event.message.latitude)+' Longitude:'+str(event.message.longitude)+' で更新したよ！'))
+        else :
+            profile = line_bot_api.get_profile(event.source['user_id'])
+            LineUser.insert(
+                line_user_id=profile.user_id, name=profile.display_name,
+                pic_url=profile.picture_url, latitude=event.message.latitude, longitude=event.message.longitude)
+            line_bot_api.push_message(
+                event.source.user_id,
+                TextSendMessage(
+                    text='Latitude:'+str(event.message.latitude)+' Longitude:'+str(event.message.longitude)+' で保存したよ！'))
+
+
+
+    """
+    postback action handle
+    """
     @handler.add(PostbackEvent)
     def on_postback(event):
-        user_id = event.source.user_id
-        postback_msg = event.postback.data
-        postback_params = event.postback.params
-        pprint.pprint(event.postback)
+        # データを辞書に変換
+        postback_data = postback_data_format_to_dict(event.postback.data)
 
-        if postback_msg == 'action=datetemp&selectId=1':
-            line_notice_schedule = LineNoticeSchedule(
-                line_user_id=user_id,
-                schedule=postback_params['datetime']
-            )
-            db.session.add(line_notice_schedule)
-            db.session.commit()
+        # 通知スケジュールの変更
+        if postback_data['action'] == 'line_notice_schedule':
+            if postback_data['how'] == 'set_datetime':
+                LineNoticeSchedule.update(
+                    where={'id':postback_data['line_notice_schedule_id']},
+                    set={'schedule':event.postback.params['datetime']})
+                line_bot_api.push_message(
+                    event.source.user_id,
+                    TextSendMessage(text='OK! ' + event.postback.params['datetime'] + 'ね！')
+                )
+            if postback_data['how'] == 'cancel':
+                line_bot_api.push_message(
+                    event.source.user_id,
+                    TextSendMessage(text='そんな～😭')
+                )
 
-            message = 'OK! ' + postback_params['datetime'] + 'ね！'
-            line_bot_api.push_message(
-                user_id,
-                TextSendMessage(text=message)
-            )
-        elif postback_msg == 'action=cancel&selectId=2':
-            line_bot_api.push_message(
-                user_id,
-                TextSendMessage(text='そんな～😭')
-            )
+    # postbackデータを文字列から辞書に変換
+    def postback_data_format_to_dict(postback_data):
+        # データリスト文字列を個別データ文字列にリスト化
+        postback_data_str_list = [data.strip() for data in postback_data.split('&')]
+
+        # 個別データ文字列をリストに変化
+        postback_data_dict = dict()
+        for postback_data_str in postback_data_str_list:
+            postback_data_str = postback_data_str.split('=')
+            postback_data_dict[postback_data_str[0]] = postback_data_str[1]
+
+        return postback_data_dict
 
 
 
