@@ -11,6 +11,7 @@ class LineUser(db.Model):
     name = db.Column(db.String(255), nullable=True)
     comment = db.Column(db.Text, nullable=True)
     pic_url = db.Column(db.Text, nullable=True)
+    weather_area_code = db.Column(db.String(20), nullable=True)
     latitude = db.Column(db.Float, nullable=True)
     longitude = db.Column(db.Float, nullable=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.now)
@@ -27,6 +28,8 @@ class LineUser(db.Model):
             line_users = line_users.filter(LineUser.line_user_id == where['line_user_id'])
         if 'name' in where:
             line_users = line_users.filter(LineUser.name == where['name'])
+        if 'weather_area_code_not' in where:
+            line_users = line_users.filter(LineUser.weather_area_code != where['weather_area_code_not'])
 
         # 複数レコードならリスト
         if limit == 1:

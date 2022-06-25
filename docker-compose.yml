@@ -42,7 +42,7 @@ services:
       - db
     networks:
       - local-net
-    command: "sleep infinity"
+    command: "python3 run.py"
 
   phpmyadmin:
     container_name: phpmyadmin
