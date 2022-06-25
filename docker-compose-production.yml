@@ -1,0 +1,49 @@
+version: "3.7"
+services:
+  db:
+    container_name: db
+    image: mysql:5.7
+    restart: always
+    tty: true
+    environment:
+      MYSQL_DATABASE: test_flask
+      MYSQL_USER: docker
+      MYSQL_PASSWORD: docker
+      MYSQL_ROOT_PASSWORD: root
+    command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - ./db/data:/var/lib/mysql
+      - ./db/my.cnf:/etc/mysql/conf.d/my.cnf
+      - ./db/sql:/docker-entrypoint-initdb.d
+    ports:
+      - 3306:3306
+    networks:
+      - local-net
+
+  app:
+    links:
+      - db
+    build:
+      context: ./app
+      args:
+        project_directory: "/app/"
+    ports:
+      - "5000:5000"
+    container_name: app
+    volumes:
+      - ./app:/app
+    env_file:
+      - ./line_channel.env
+      - ./app_env.env
+    environment:
+      TZ: "Asia/Tokyo"
+      FLASK_ENV: "development"
+    depends_on:
+      - db
+    networks:
+      - local-net
+    command: "python3 run.py"
+
+networks:
+  local-net:
+    driver: bridge

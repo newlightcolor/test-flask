@@ -127,6 +127,8 @@ def create_app():
                 line_user.line_user_id,
                 TextSendMessage(text=message))
 
+        return "とぅる～"
+
     """
     line callback
     """
