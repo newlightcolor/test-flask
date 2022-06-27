@@ -129,6 +129,8 @@ def create_app():
 
         return "とぅる～"
 
+
+
     """
     line callback
     """
@@ -502,6 +504,8 @@ def create_app():
                 postback_data_dict[postback_data_str[0]] = postback_data_str[1]
 
         return postback_data_dict
+
+
 
     """
     common process
