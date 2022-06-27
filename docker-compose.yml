@@ -6,10 +6,10 @@ services:
     restart: always
     tty: true
     environment:
-      MYSQL_DATABASE: test_flask
-      MYSQL_USER: docker
-      MYSQL_PASSWORD: docker
-      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
     command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     volumes:
       - ./db/data:/var/lib/mysql
@@ -31,8 +31,7 @@ services:
     volumes:
       - ./app:/app
     env_file:
-      - ./line_channel.env
-      - ./app_env.env
+      - ./.env
     environment:
       TZ: "Asia/Tokyo"
       FLASK_ENV: "development"
@@ -60,9 +59,9 @@ services:
     image: phpmyadmin/phpmyadmin
     environment:
       - PMA_ARBITRARY=1
-      - PMA_HOSTS=db
-      - PMA_USER=root
-      - PMA_PASSWORD=root
+      - PMA_HOSTS=${DB_HOST}
+      - PMA_USER=${DB_ROOT_USER}
+      - PMA_PASSWORD=${DB_ROOT_PASSWORD}
     ports:
       - "3000:80"
     networks:
@@ -73,6 +72,3 @@ services:
 networks:
   local-net:
     driver: bridge
-
-volumes:
-  socket:

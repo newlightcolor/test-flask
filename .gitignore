@@ -1,6 +1,5 @@
 # 環境変数
-line_channel.env
-app_env.env
+.env
 
 # python関連
 __pycache__
