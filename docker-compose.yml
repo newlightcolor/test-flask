@@ -16,7 +16,7 @@ services:
       - ./db/my.cnf:/etc/mysql/conf.d/my.cnf
       - ./db/sql:/docker-entrypoint-initdb.d
     ports:
-      - 3306:3306
+      - "3306:3306"
     networks:
       - local-net
 
@@ -27,8 +27,6 @@ services:
       context: ./app
       args:
         project_directory: "/app/"
-    ports:
-      - "5000:5000"
     container_name: app
     volumes:
       - ./app:/app
@@ -42,7 +40,20 @@ services:
       - db
     networks:
       - local-net
-    command: "python3 run.py"
+    ports:
+      - "5000:5000"
+    command: "uwsgi --ini /app/uwsgi.ini"
+
+  web:
+    container_name: web-server
+    hostname: web-server
+    build: ./web
+    ports:
+      - "8080:80"
+    volumes:
+      - ./web/nginx.conf:/etc/nginx/nginx.conf
+    networks:
+      - local-net
 
   phpmyadmin:
     container_name: phpmyadmin
@@ -53,10 +64,15 @@ services:
       - PMA_USER=root
       - PMA_PASSWORD=root
     ports:
-      - 8080:80
+      - "3000:80"
     networks:
       - local-net
+    volumes:
+      - ./phpmyadmin/sessions:/sessions
 
 networks:
   local-net:
     driver: bridge
+
+volumes:
+  socket:
