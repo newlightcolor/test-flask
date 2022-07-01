@@ -1,8 +1,16 @@
 # 環境変数
 .env
+p.env
+d.env
 
 # python関連
 __pycache__
 
 # DB関連
 /db/data
+
+# uWSGI
+/app/uwsgi.log
+
+# phpmyadmin
+/phpmyadmin/sessions

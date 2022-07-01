@@ -1,5 +1,6 @@
 from datetime import datetime
 from db import db
+from sqlalchemy.dialects import mysql
 
 
 class WeatherAreaCode(db.Model):
@@ -7,7 +8,6 @@ class WeatherAreaCode(db.Model):
     __tablename__ = 'weather_area_code'
 
     id = db.Column(db.Integer, primary_key=True)
-    section = db.Column(db.String(20), nullable=True)
     code = db.Column(db.String(20), nullable=True)
     parent_code = db.Column(db.String(20), nullable=True)
     name = db.Column(db.String(100), nullable=True)
@@ -21,8 +21,6 @@ class WeatherAreaCode(db.Model):
         # WHERE
         if 'id' in where:
             areas = areas.filter(WeatherAreaCode.id == where['id'])
-        if 'section' in where:
-            areas = areas.filter(WeatherAreaCode.section == where['section'])
         if 'code' in where:
             areas = areas.filter(WeatherAreaCode.code == where['code'])
         if 'parent_code' in where:
@@ -36,6 +34,10 @@ class WeatherAreaCode(db.Model):
         if 'office' in where:
             areas = areas.filter(WeatherAreaCode.office == where['office'])
 
+        print(areas.statement.compile(dialect=mysql.dialect(),
+                                      compile_kwargs={"literal_binds": True}),
+                                      flush=True)
+
         # 複数レコードならリスト
         if limit == 1:
             return areas.first()
@@ -43,9 +45,9 @@ class WeatherAreaCode(db.Model):
             return areas.all()
 
     # INSERT
-    def insert(section:str, code:str, name:str, parent_code:str = None, en_name:str = None, office:str = None):
+    def insert(code:str, name:str, parent_code:str = None, en_name:str = None, office:str = None):
         area = \
-            WeatherAreaCode(section=section, code=code, name=name, parent_code=parent_code, en_name=en_name, office=office)
+            WeatherAreaCode(code=code, name=name, parent_code=parent_code, en_name=en_name, office=office)
         db.session.add(area)
         db.session.commit()
         return area.id #insert_id
