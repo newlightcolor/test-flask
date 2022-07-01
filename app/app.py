@@ -350,7 +350,7 @@ def create_app():
     def ask_schedule(event):
         line_user_id = event.source.user_id
         line_notice_schedule_id = str(LineNoticeSchedule.insert(line_user_id=line_user_id))
-        set_schedule_message_uri = os.getenv('BASE_URL')+line_user_id+'/'+line_notice_schedule_id+'/'
+        set_schedule_message_uri = os.getenv('BASE_URL')+'/'+line_user_id+'/'+line_notice_schedule_id+'/'
 
         buttonsTemplate = ButtonsTemplate(
             text='いつ通知すればいい？',
