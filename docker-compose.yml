@@ -41,7 +41,7 @@ services:
       - local-net
     ports:
       - "5000:5000"
-    command: "uwsgi --ini /app/uwsgi.ini"
+    command: "sleep infinity"
 
   web:
     container_name: web-server
