@@ -258,8 +258,8 @@ def create_app():
                     'text': '&'.join(['c=life', 'd=schedule', 'm=getTemplateForSet'])
                 }])
 
-        line_bot_api.reply_message(
-            event.reply_token,
+        line_bot_api.push_message(
+            event.source.user_id,
             TemplateSendMessage(
                 alt_text='何する？',
                 template=menu))
@@ -273,8 +273,8 @@ def create_app():
                     'text': '&'.join(["レシピ検索をしたい\n", 'c=life', 'd=recipeCategory', 'm=get'])
                 }])
 
-        line_bot_api.reply_message(
-            event.reply_token,
+        line_bot_api.push_message(
+            event.source.user_id,
             TemplateSendMessage(
                 alt_text='何する？',
                 template=menu))
