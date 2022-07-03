@@ -11,6 +11,7 @@ from pipes import Template
 from flask import Flask, request, abort, render_template
 from db import init_db
 from models import User, LineUser, LineNoticeSchedule
+from models import RakutenRecipeCategory
 
 from linebot import (
     LineBotApi, WebhookHandler
@@ -20,7 +21,7 @@ from linebot.exceptions import (
 )
 from linebot.models import (
     MessageEvent, TextMessage, TextSendMessage, TemplateSendMessage, ButtonsTemplate,
-    PostbackEvent, QuickReply, LocationMessage
+    PostbackEvent, QuickReply, LocationMessage, CarouselTemplate
 )
 
 from models.weather_area_code import WeatherAreaCode
@@ -196,6 +197,14 @@ def create_app():
                     if param['m'] == 'post':
                         set_weather_area(event, param['select'])
                         sys.exit(0)
+                if param['d'] == 'recipeCategory':
+                    if param['m'] == 'get':
+                        send_recipe_category(event, param['selectedCategoryId'])
+                        sys.exit(0)
+                if param['d'] == 'recipe':
+                    if param['m'] == 'get':
+                        send_recipe(event, param['selectedCategoryId'])
+                        sys.exit(0)
 
 
         # メインメニューを送信
@@ -247,6 +256,21 @@ def create_app():
                     'type': 'message',
                     'label': '通知してほしい',
                     'text': '&'.join(['c=life', 'd=schedule', 'm=getTemplateForSet'])
+                }])
+
+        line_bot_api.reply_message(
+            event.reply_token,
+            TemplateSendMessage(
+                alt_text='何する？',
+                template=menu))
+
+        menu = ButtonsTemplate(
+            text='何する？',
+            actions=[
+                {
+                    'type': 'message',
+                    'label': 'レシピ検索',
+                    'text': '&'.join(["レシピ検索をしたい\n", 'c=life', 'd=recipeCategory', 'm=get'])
                 }])
 
         line_bot_api.reply_message(
@@ -433,6 +457,88 @@ def create_app():
                     alt_text='地域を選択してね！',
                     template=menu))
 
+    # レシピカテゴリ検索
+    def send_recipe_category(event, selectedCategoryId = None):
+        where = dict()
+        where['parent_category_id'] = selectedCategoryId
+        recipeCategories = RakutenRecipeCategory.get_list(where=where)
+
+        actions = []
+        for recipeCategory in recipeCategories:
+            actions.append({
+                'type': 'message',
+                'label': recipeCategory.category_name,
+                'text': '&'.join([recipeCategory.category_name+"\n", 'c=life', 'd=recipeCategory', 'm=get', 'selectedCategoryId='+str(recipeCategory.category_id)])
+            })
+            if len(actions) >= 4:
+                menu = ButtonsTemplate(text='どれがいい？',
+                                       actions=actions)
+                templateSendMessage = TemplateSendMessage(alt_text='どれがいい？',
+                                                          template=menu)
+                line_bot_api.push_message(event.source.user_id,
+                                          templateSendMessage)
+                actions = []
+
+        if len(actions):
+            menu = ButtonsTemplate(text='どれがいい？',
+                                   actions=actions)
+            templateSendMessage = TemplateSendMessage(alt_text='どれがいい？',
+                                                      template=menu)
+            line_bot_api.push_message(event.source.user_id,
+                                        templateSendMessage)
+
+        if selectedCategoryId:
+            selectedCategory = RakutenRecipeCategory.get_list(where={'id': selectedCategoryId}, limit=1)
+            actions = []
+            actions.append({
+                'type': 'message',
+                'label': selectedCategory.category_name+'のレシピを検索する',
+                'text': '&'.join([selectedCategory.category_name+"のレシピを見せて！\n", 'c=life', 'd=recipe', 'm=get', 'selectedCategoryId='+str(selectedCategoryId)])
+            })
+            menu = ButtonsTemplate(text='どれがいい？',
+                                   actions=actions)
+            templateSendMessage = TemplateSendMessage(alt_text='このカテゴリーで検索する!',
+                                                      template=menu)
+            line_bot_api.push_message(event.source.user_id,
+                                      templateSendMessage)
+        return True
+
+    # レシピ検索
+    def send_recipe(event, selectedCategoryId):
+        if selectedCategoryId:
+            url = ''.join(["https://app.rakuten.co.jp/services/api/Recipe/CategoryRanking/20170426",
+                          "?format={0}",
+                          "&categoryId={1}",
+                          "&applicationId={2}"]).format('json', str(selectedCategoryId), os.getenv("RAKUTEN_APP_ID"))
+            res = requests.get(url)
+            res = json.loads(res.text)
+
+            columns = []
+            for result in res['result']:
+                columns.append({
+                    "thumbnailImageUrl": result['foodImageUrl'],
+                    'title': result['recipeTitle'],
+                    'text': result['recipeTitle'],
+                    'actions': [{
+                        "type": "uri",
+                        "label": "このレシピを見る",
+                        "uri": result['recipeUrl']
+                    }]
+                })
+                if len(columns) >= 10:
+                    carouselTemplate = CarouselTemplate(columns=columns)
+                    templateSendMessage = TemplateSendMessage(alt_text="レシピ一覧",
+                                                              template=carouselTemplate)
+                    line_bot_api.push_message(event.source.user_id,
+                                            templateSendMessage)
+
+            if len(columns):
+                carouselTemplate = CarouselTemplate(columns=columns)
+                templateSendMessage = TemplateSendMessage(alt_text="レシピ一覧",
+                                                          template=carouselTemplate)
+                line_bot_api.push_message(event.source.user_id,
+                                          templateSendMessage)
+        return True
 
 
     """
