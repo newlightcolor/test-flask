@@ -199,7 +199,7 @@ def create_app():
                         sys.exit(0)
                 if param['d'] == 'recipeCategory':
                     if param['m'] == 'get':
-                        send_recipe_category(event, param['selectedCategoryId'])
+                        send_recipe_category(event, param['selectedCategoryId'] if 'selectedCategoryId' in param else None)
                         sys.exit(0)
                 if param['d'] == 'recipe':
                     if param['m'] == 'get':
@@ -459,48 +459,86 @@ def create_app():
 
     # レシピカテゴリ検索
     def send_recipe_category(event, selectedCategoryId = None):
-        where = dict()
-        where['parent_category_id'] = selectedCategoryId
-        recipeCategories = RakutenRecipeCategory.get_list(where=where)
-
+        # 最後に選択したカテゴリのID取得
+        if selectedCategoryId:
+            selectedCategoryIds = selectedCategoryId.split('-')
+            lastSelectedCategoryId = selectedCategoryIds[len(selectedCategoryIds)-1]
+            nowLayer = len(selectedCategoryIds)
+        else:
+            lastSelectedCategoryId = None
+            nowLayer = 0
+        
+        # メッセージ送信
         actions = []
+        recipeCategories = RakutenRecipeCategory.get_list(where={'parent_category_id':lastSelectedCategoryId, 'layer': nowLayer+1})
         for recipeCategory in recipeCategories:
-            actions.append({
-                'type': 'message',
-                'label': recipeCategory.category_name,
-                'text': '&'.join([recipeCategory.category_name+"\n", 'c=life', 'd=recipeCategory', 'm=get', 'selectedCategoryId='+str(recipeCategory.category_id)])
-            })
+            # 選択中のIDがなければ必ずカテゴリ検索ボタン
+            if selectedCategoryId:
+                # 孫カテゴリが0件なら子レシピ検索ボタン
+                # 孫カテゴリが1件なら孫レシピ検索ボタン
+                # 孫カテゴリが1件以上ならカテゴリ検索ボタン
+                childCategories = RakutenRecipeCategory.get_list(where={'parent_category_id':recipeCategory.category_id, 'layer': nowLayer+2})
+                if len(childCategories) == 0:
+                    actions.append({
+                        'type': 'message',
+                        'label': recipeCategory.category_name,
+                        'text': '&'.join([recipeCategory.category_name+"\n",
+                                        'c=life',
+                                        'd=recipe',
+                                        'm=get',
+                                        'selectedCategoryId='+\
+                                            '-'.join([selectedCategoryId, str(recipeCategory.category_id)])
+                                        ])
+                    })
+                if len(childCategories) == 1:
+                    actions.append({
+                        'type': 'message',
+                        'label': childCategories[0].category_name,
+                        'text': '&'.join([childCategories[0].category_name+"\n",
+                                        'c=life',
+                                        'd=recipe',
+                                        'm=get',
+                                        'selectedCategoryId='+\
+                                            '-'.join([selectedCategoryId, str(recipeCategory.category_id), str(childCategories[0].category_id)])
+                                        ])
+                    })
+                if len(childCategories) >= 2:
+                    actions.append({
+                        'type': 'message',
+                        'label': recipeCategory.category_name,
+                        'text': '&'.join([recipeCategory.category_name+"\n",
+                                        'c=life',
+                                        'd=recipeCategory',
+                                        'm=get',
+                                        'selectedCategoryId='+selectedCategoryId+"-"+str(recipeCategory.category_id)])
+                    })
+            else:
+                actions.append({
+                    'type': 'message',
+                    'label': recipeCategory.category_name,
+                    'text': '&'.join([recipeCategory.category_name+"\n",
+                                    'c=life',
+                                    'd=recipeCategory',
+                                    'm=get',
+                                    'selectedCategoryId='+str(recipeCategory.category_id)])
+                })
+
             if len(actions) >= 4:
                 menu = ButtonsTemplate(text='どれがいい？',
-                                       actions=actions)
+                                        actions=actions)
                 templateSendMessage = TemplateSendMessage(alt_text='どれがいい？',
-                                                          template=menu)
+                                                            template=menu)
                 line_bot_api.push_message(event.source.user_id,
-                                          templateSendMessage)
+                                        templateSendMessage)
                 actions = []
 
         if len(actions):
             menu = ButtonsTemplate(text='どれがいい？',
-                                   actions=actions)
+                                actions=actions)
             templateSendMessage = TemplateSendMessage(alt_text='どれがいい？',
-                                                      template=menu)
+                                                    template=menu)
             line_bot_api.push_message(event.source.user_id,
                                         templateSendMessage)
-
-        if selectedCategoryId:
-            selectedCategory = RakutenRecipeCategory.get_list(where={'id': selectedCategoryId}, limit=1)
-            actions = []
-            actions.append({
-                'type': 'message',
-                'label': selectedCategory.category_name+'のレシピを検索する',
-                'text': '&'.join([selectedCategory.category_name+"のレシピを見せて！\n", 'c=life', 'd=recipe', 'm=get', 'selectedCategoryId='+str(selectedCategoryId)])
-            })
-            menu = ButtonsTemplate(text='どれがいい？',
-                                   actions=actions)
-            templateSendMessage = TemplateSendMessage(alt_text='このカテゴリーで検索する!',
-                                                      template=menu)
-            line_bot_api.push_message(event.source.user_id,
-                                      templateSendMessage)
         return True
 
     # レシピ検索
@@ -509,7 +547,7 @@ def create_app():
             url = ''.join(["https://app.rakuten.co.jp/services/api/Recipe/CategoryRanking/20170426",
                           "?format={0}",
                           "&categoryId={1}",
-                          "&applicationId={2}"]).format('json', str(selectedCategoryId), os.getenv("RAKUTEN_APP_ID"))
+                          "&applicationId={2}"]).format('json', selectedCategoryId, os.getenv("RAKUTEN_APP_ID"))
             res = requests.get(url)
             res = json.loads(res.text)
 
@@ -677,6 +715,23 @@ def create_app():
 
         return weather_datas
 
+    def get_rakuten_recipe_categories(categoryType = None):
+        if categoryType is None:
+            url = "https://app.rakuten.co.jp/services/api/Recipe/CategoryList/20170426"+\
+                "?applicationId={applicationId}"
+            url = url.format(applicationId=os.getenv('RAKUTEN_APP_ID'))
+            res = requests.get(url)
+            res = json.loads(res.text)
+            return res['result']
+        
+        if categoryType:
+            url = "https://app.rakuten.co.jp/services/api/Recipe/CategoryList/20170426"+\
+                "?format=json&categoryType={categoryType}"+\
+                "&applicationId={applicationId}"
+            url = url.format(categoryType=categoryType, applicationId=os.getenv('RAKUTEN_APP_ID'))
+            res = requests.get(url)
+            res = json.loads(res.text)
+            return res['result'][categoryType]
 
     return app
 

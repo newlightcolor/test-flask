@@ -8,8 +8,10 @@ class RakutenRecipeCategory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     category_id = db.Column(db.Integer, nullable=False)
     parent_category_id = db.Column(db.Integer, nullable=True)
+    layer = db.Column(db.Integer, nullable=True)
     category_name = db.Column(db.String(100), nullable=True)
     category_url = db.Column(db.String(200), nullable=True)
+    should_show = db.Column(db.Integer, nullable=False)
 
     #SELECT
     def get_list(where=dict(), limit=0):
@@ -21,7 +23,11 @@ class RakutenRecipeCategory(db.Model):
         if 'parent_category_id' in where:
             rakuten_recipe_category = rakuten_recipe_category.filter(RakutenRecipeCategory.parent_category_id == where['parent_category_id'])
         if 'category_id' in where:
-            rakuten_recipe_category = rakuten_recipe_category.filter(RakutenRecipeCategory.category_id == where['caetogry_id'])
+            rakuten_recipe_category = rakuten_recipe_category.filter(RakutenRecipeCategory.category_id == where['category_id'])
+        if 'layer' in where:
+            rakuten_recipe_category = rakuten_recipe_category.filter(RakutenRecipeCategory.layer == where['layer'])
+        
+        rakuten_recipe_category = rakuten_recipe_category.filter(RakutenRecipeCategory.should_show == 1)
 
         # 複数レコードなら辞書で返す
         if limit == 1:
@@ -30,12 +36,14 @@ class RakutenRecipeCategory(db.Model):
             return rakuten_recipe_category.all()
 
     #INSERT
-    def insert(category_id:int, parent_category_id:int = None, category_name:str = None, category_url:str = None):
+    def insert(category_id:int, parent_category_id:int = None, layer:int = None, category_name:str = None, category_url:str = None, should_show:int = 1):
         rakuten_recipe_category = RakutenRecipeCategory(
                                                     category_id=category_id,
                                                     parent_category_id=parent_category_id,
+                                                    layer=layer,
                                                     category_name=category_name,
-                                                    category_url=category_url)
+                                                    category_url=category_url,
+                                                    should_show=should_show)
         db.session.add(rakuten_recipe_category)
         db.session.commit()
         return rakuten_recipe_category.id #insert_id
