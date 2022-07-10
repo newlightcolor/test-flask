@@ -544,12 +544,7 @@ def create_app():
     # レシピ検索
     def send_recipe(event, selectedCategoryId):
         if selectedCategoryId:
-            url = ''.join(["https://app.rakuten.co.jp/services/api/Recipe/CategoryRanking/20170426",
-                          "?format={0}",
-                          "&categoryId={1}",
-                          "&applicationId={2}"]).format('json', selectedCategoryId, os.getenv("RAKUTEN_APP_ID"))
-            res = requests.get(url)
-            res = json.loads(res.text)
+            res = get_rakuten_recipes(selectedCategoryId)
 
             columns = []
             for result in res['result']:
@@ -732,6 +727,18 @@ def create_app():
             res = requests.get(url)
             res = json.loads(res.text)
             return res['result'][categoryType]
+
+    # 楽天レシピ取得
+    def get_rakuten_recipes(recipeCategoryId):
+        url = ''.join(["https://app.rakuten.co.jp/services/api/Recipe/CategoryRanking/20170426",
+                       "?format={format}",
+                       "&categoryId={categoryId}",
+                       "&applicationId={appId}"])
+        url = url.format(format='json', categoryId=recipeCategoryId, appId=os.getenv("RAKUTEN_APP_ID"))
+        res = requests.get(url)
+        res = json.loads(res.text)
+        return res
+
 
     return app
 
