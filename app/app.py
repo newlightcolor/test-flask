@@ -35,6 +35,27 @@ def create_app():
     line_bot_api = LineBotApi(os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
     handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
 
+    monthly_push_message_count = 0
+    for i in range(1, int(datetime.strftime(datetime.now(), ('%d')))+1):
+        if len(str(i)) == 1:
+            today = "0" + str(i)
+        elif len(str(i)) == 2:
+            today = str(i)
+
+        if monthly_push_message_count != 0:
+            now_average = monthly_push_message_count / (i-1)
+
+        search_day = datetime.strftime(datetime.now(), ('%Y%m'))+today
+        delivery_push = line_bot_api.get_message_delivery_push(date=search_day)
+        if delivery_push.status == 'ready':
+            monthly_push_message_count = monthly_push_message_count + delivery_push.success
+        if delivery_push.status == 'unready':
+            if now_average:
+                monthly_push_message_count = monthly_push_message_count + now_average
+    if monthly_push_message_count >= 950:
+        line_bot_api = LineBotApi(os.getenv('LINE_CHANNEL_ACCESS_TOKEN2'))
+        handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET2'))
+
     """
     WebAPP route
     """
