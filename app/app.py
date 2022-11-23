@@ -35,6 +35,7 @@ def create_app():
     line_bot_api = LineBotApi(os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
     handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
 
+    now_average = 0
     monthly_push_message_count = 0
     for i in range(1, int(datetime.strftime(datetime.now(), ('%d')))+1):
         if len(str(i)) == 1:
