@@ -95,7 +95,7 @@ def create_app():
     """
     API route
     """
-    @app.route("/send_message_all_user/")
+    @app.route("/send_message_all_user/", methods=['POST'])
     def send_message_all_user():
         if request.form['apiKey'] is not os.getenv('API_KEY'):
             return False
