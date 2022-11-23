@@ -97,7 +97,10 @@ def create_app():
     """
     @app.route("/send_message_all_user/")
     def send_message_all_user():
-        message = 'test-'
+        if request.form['apiKey'] is not os.getenv('API_KEY'):
+            return False
+
+        message = request.form['message']
         SendMessageAllUserLog.insert(message=message)
         return 'OK'
 
