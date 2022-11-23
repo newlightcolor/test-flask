@@ -11,6 +11,7 @@ from pipes import Template
 from flask import Flask, request, abort, render_template
 from db import init_db
 from models import User, LineUser, LineNoticeSchedule
+from models import SendMessageAllUserLog
 from models import RakutenRecipeCategory
 
 from linebot import (
@@ -94,7 +95,11 @@ def create_app():
     """
     API route
     """
-
+    @app.route("/send_message_all_user/")
+    def send_message_all_user():
+        message = 'test-'
+        SendMessageAllUserLog.insert(message=message)
+        return 'OK'
 
 
     """
