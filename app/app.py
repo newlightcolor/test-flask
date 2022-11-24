@@ -100,8 +100,8 @@ def create_app():
         # if request.form['apiKey'] != os.getenv('API_KEY'):
         #     return False
 
-        if request.form.get('apiKey') is not None:
-            message = 'api key in request is:' + request.form['apiKey']
+        if request.headers.get('apiKey') is not None:
+            message = 'api key in request is:' + request.headers.get('apiKey')
             SendMessageAllUserLog.insert(message=message)
         if os.getenv('API_KEY') is not None:
             message = 'api key in env is:' + os.getenv('API_KEY')
