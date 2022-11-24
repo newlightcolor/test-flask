@@ -100,13 +100,21 @@ def create_app():
         if request.headers.get('apiKey') != os.getenv('API_KEY'):
             message = '認証NG'
             SendMessageAllUserLog.insert(message=message)
+            return 'NG'
+
         if request.headers.get('apiKey') == os.getenv('API_KEY'):
+            line_users = LineUser.get_list(where={'weather_area_code_not': None})
+            for line_user in line_users:
+                line_bot_api.push_message(
+                    line_user.line_user_id,
+                    TextSendMessage(text=request.form['message']))
+
             message = '認証OK'
             SendMessageAllUserLog.insert(message=message)
+            message = request.form['message']
+            SendMessageAllUserLog.insert(message=message)
+            return 'OK'
 
-        message = request.form['message']
-        SendMessageAllUserLog.insert(message=message)
-        return 'OK'
 
 
     """
