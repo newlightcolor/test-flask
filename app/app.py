@@ -97,14 +97,11 @@ def create_app():
     """
     @app.route("/send_message_all_user/", methods=['POST'])
     def send_message_all_user():
-        # if request.form['apiKey'] != os.getenv('API_KEY'):
-        #     return False
-
-        if request.headers.get('apiKey') is not None:
-            message = 'api key in request is:' + request.headers.get('apiKey')
+        if request.headers.get('apiKey') != os.getenv('API_KEY'):
+            message = '認証NG'
             SendMessageAllUserLog.insert(message=message)
-        if os.getenv('API_KEY') is not None:
-            message = 'api key in env is:' + os.getenv('API_KEY')
+        if request.headers.get('apiKey') == os.getenv('API_KEY'):
+            message = '認証OK'
             SendMessageAllUserLog.insert(message=message)
 
         message = request.form['message']
